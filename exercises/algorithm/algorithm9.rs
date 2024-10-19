@@ -1,9 +1,3 @@
-/*
-	heap
-	This question requires you to implement a binary heap function
-*/
-// I AM NOT DONE
-
 use std::cmp::Ord;
 use std::default::Default;
 
@@ -18,12 +12,12 @@ where
 
 impl<T> Heap<T>
 where
-    T: Default,
+    T: Default + Ord,
 {
     pub fn new(comparator: fn(&T, &T) -> bool) -> Self {
         Self {
             count: 0,
-            items: vec![T::default()],
+            items: vec![T::default()], // We start with a dummy value at index 0
             comparator,
         }
     }
@@ -37,15 +31,55 @@ where
     }
 
     pub fn add(&mut self, value: T) {
-        //TODO
+        self.items.push(value);
+        self.count += 1;
+        self.bubble_up(self.count);
+    }
+
+    pub fn next(&mut self) -> Option<T> {
+        if self.is_empty() {
+            return None;
+        }
+
+        let result = self.items.swap_remove(1); // Remove the root
+        self.count -= 1;
+
+        if self.count > 0 {
+            self.bubble_down(1); // Restore heap property after root removal
+        }
+
+        Some(result)
+    }
+
+    // fn bubble_up(&mut self, mut idx: usize) {
+    //     while idx > 1 && (self.comparator)(&self.items[idx], &self.items[self.parent_idx(idx)]) {
+    //         self.items.swap(idx, self.parent_idx(idx));
+    //         idx = self.parent_idx(idx);
+    //     }
+    // }
+    fn bubble_up(&mut self, mut idx: usize) {
+        while idx > 1 {
+            let parent = self.parent_idx(idx); // Compute the parent index first
+            if (self.comparator)(&self.items[idx], &self.items[parent]) {
+                self.items.swap(idx, parent); // Then perform the swap
+            }
+            idx = parent; // Move the index to the parent
+        }
+    }
+    
+
+    fn bubble_down(&mut self, mut idx: usize) {
+        while self.children_present(idx) {
+            let smaller_child_idx = self.smallest_child_idx(idx);
+            if (self.comparator)(&self.items[smaller_child_idx], &self.items[idx]) {
+                self.items.swap(smaller_child_idx, idx);
+            }
+            idx = smaller_child_idx;
+        }
     }
 
     fn parent_idx(&self, idx: usize) -> usize {
         idx / 2
-    }
-
-    fn children_present(&self, idx: usize) -> bool {
-        self.left_child_idx(idx) <= self.count
     }
 
     fn left_child_idx(&self, idx: usize) -> usize {
@@ -53,12 +87,21 @@ where
     }
 
     fn right_child_idx(&self, idx: usize) -> usize {
-        self.left_child_idx(idx) + 1
+        idx * 2 + 1
+    }
+
+    fn children_present(&self, idx: usize) -> bool {
+        self.left_child_idx(idx) <= self.count
     }
 
     fn smallest_child_idx(&self, idx: usize) -> usize {
-        //TODO
-		0
+        let left = self.left_child_idx(idx);
+        let right = self.right_child_idx(idx);
+        if right <= self.count && (self.comparator)(&self.items[right], &self.items[left]) {
+            right
+        } else {
+            left
+        }
     }
 }
 
@@ -79,13 +122,12 @@ where
 
 impl<T> Iterator for Heap<T>
 where
-    T: Default,
+    T: Default + Ord,
 {
     type Item = T;
 
     fn next(&mut self) -> Option<T> {
-        //TODO
-		None
+        self.next()
     }
 }
 
@@ -97,7 +139,7 @@ impl MinHeap {
     where
         T: Default + Ord,
     {
-        Heap::new(|a, b| a < b)
+        Heap::new_min()
     }
 }
 
@@ -109,13 +151,14 @@ impl MaxHeap {
     where
         T: Default + Ord,
     {
-        Heap::new(|a, b| a > b)
+        Heap::new_max()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn test_empty_heap() {
         let mut heap = MaxHeap::new::<i32>();
